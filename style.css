@@ -1,0 +1,167 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+}
+
+header {
+    background: #2563eb;
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+}
+
+header h1 {
+    margin-bottom: 8px;
+}
+
+.container {
+    width: 95%;
+    max-width: 1400px;
+    margin: 25px auto;
+}
+
+.toolbar {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.upload-btn,
+button {
+    border: none;
+    padding: 11px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.upload-btn {
+    background: #2563eb;
+    color: white;
+}
+
+button {
+    background: #374151;
+    color: white;
+}
+
+button:hover,
+.upload-btn:hover {
+    opacity: 0.85;
+}
+
+#downloadBtn {
+    background: #16a34a;
+}
+
+#clearBtn {
+    background: #dc2626;
+}
+
+.editor-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.pdf-panel,
+.text-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pdf-panel h2,
+.text-panel h2 {
+    margin-bottom: 15px;
+}
+
+#pdfPreview {
+    height: 650px;
+    overflow-y: auto;
+    background: #e5e7eb;
+    padding: 15px;
+    text-align: center;
+}
+
+.pdf-page {
+    display: block;
+    margin: 0 auto 20px;
+    max-width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stats {
+    font-size: 14px;
+    color: #555;
+}
+
+#textEditor {
+    width: 100%;
+    height: 650px;
+    resize: vertical;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 15px;
+    font-size: 16px;
+    line-height: 1.6;
+    outline: none;
+}
+
+#textEditor:focus {
+    border-color: #2563eb;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+@media (max-width: 900px) {
+    .editor-section {
+        grid-template-columns: 1fr;
+    }
+
+    #pdfPreview,
+    #textEditor {
+        height: 500px;
+    }
+}
+
+@media (max-width: 500px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .upload-btn,
+    button {
+        text-align: center;
+        width: 100%;
+    }
+}
