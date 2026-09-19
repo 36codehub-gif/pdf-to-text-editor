@@ -1,54 +1,2739 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-  >
+<meta charset="UTF-8">
 
-  <title>PDF Editor</title>
+<meta
+  name="viewport"
+  content="width=device-width,
+  initial-scale=1,
+  maximum-scale=1,
+  user-scalable=no"
+>
 
-  <link rel="stylesheet" href="style.css">
+<title>Smart PDF Editor</title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  width:100%;
+  height:100%;
+  font-family:Arial,sans-serif;
+  background:#eef1f5;
+}
+
+body{
+  overflow:hidden;
+}
+
+/* ================================
+   TOP BAR
+================================ */
+
+.topbar{
+
+  height:58px;
+
+  display:flex;
+  align-items:center;
+  gap:7px;
+
+  padding:7px 9px;
+
+  background:#111827;
+
+  color:white;
+
+  overflow-x:auto;
+
+  white-space:nowrap;
+
+}
+
+.logo{
+  font-weight:bold;
+  margin-right:5px;
+}
+
+button,
+.upload{
+
+  border:0;
+
+  border-radius:6px;
+
+  padding:9px 12px;
+
+  background:#2563eb;
+
+  color:white;
+
+  font-size:14px;
+
+  cursor:pointer;
+
+  touch-action:manipulation;
+
+}
+
+button:active,
+.upload:active{
+  transform:scale(.97);
+}
+
+.upload input{
+  display:none;
+}
+
+.green{
+  background:#16a34a;
+}
+
+.red{
+  background:#dc2626;
+}
+
+.gray{
+  background:#4b5563;
+}
+
+
+/* ================================
+   TOOLBAR
+================================ */
+
+.toolbar{
+
+  min-height:48px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:7px;
+
+  flex-wrap:wrap;
+
+  padding:7px;
+
+  background:white;
+
+  border-bottom:1px solid #ddd;
+
+}
+
+.toolbar label{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:4px;
+
+  font-size:13px;
+
+}
+
+.toolbar input,
+.toolbar select{
+
+  height:32px;
+
+  border:1px solid #cbd5e1;
+
+  border-radius:5px;
+
+  padding:3px 6px;
+
+}
+
+
+/* ================================
+   STATUS
+================================ */
+
+#status{
+
+  height:32px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  background:white;
+
+  color:#475569;
+
+  font-size:13px;
+
+  border-bottom:1px solid #ddd;
+
+}
+
+
+/* ================================
+   PDF VIEWER
+================================ */
+
+#viewer{
+
+  position:absolute;
+
+  top:138px;
+
+  left:0;
+
+  right:0;
+
+  bottom:0;
+
+  overflow:auto;
+
+  padding:20px;
+
+  text-align:center;
+
+  -webkit-overflow-scrolling:touch;
+
+}
+
+
+/* ================================
+   PAGE
+================================ */
+
+#page{
+
+  position:relative;
+
+  display:inline-block;
+
+  background:white;
+
+  box-shadow:
+    0 5px 25px rgba(0,0,0,.25);
+
+  text-align:left;
+
+  touch-action:manipulation;
+
+}
+
+#pdfCanvas{
+
+  display:block;
+
+}
+
+
+/* ================================
+   EDITOR LAYER
+================================ */
+
+#layer{
+
+  position:absolute;
+
+  left:0;
+  top:0;
+
+  width:100%;
+  height:100%;
+
+  overflow:hidden;
+
+  touch-action:manipulation;
+
+}
+
+
+/* ================================
+   TEXT OBJECT
+================================ */
+
+.textObject{
+
+  position:absolute;
+
+  display:block;
+
+  margin:0;
+
+  padding:0;
+
+  white-space:pre;
+
+  cursor:text;
+
+  /*
+    Original text remains underneath.
+  */
+
+  color:transparent;
+
+  background:transparent;
+
+  border:0;
+
+  outline:0;
+
+  user-select:none;
+
+  -webkit-user-select:none;
+
+  pointer-events:auto;
+
+  touch-action:manipulation;
+
+  z-index:20;
+
+}
+
+
+/*
+  Hover/select
+*/
+
+.textObject:hover{
+
+  background:
+    rgba(37,99,235,.10);
+
+}
+
+
+/*
+  Edited text
+*/
+
+.textObject.changed{
+
+  color:var(--text-color,#000);
+
+  background:#fff;
+
+  border:1px solid #2563eb;
+
+  border-radius:2px;
+
+}
+
+
+/*
+  Editing
+*/
+
+.textObject.editing{
+
+  color:var(--text-color,#000);
+
+  background:#fff;
+
+  border:2px solid #2563eb;
+
+  border-radius:4px;
+
+  outline:none;
+
+  padding:2px 3px;
+
+  min-width:25px;
+
+  min-height:22px;
+
+  user-select:text;
+
+  -webkit-user-select:text;
+
+  z-index:10000;
+
+}
+
+
+/* ================================
+   MOBILE
+================================ */
+
+@media(max-width:700px){
+
+  .logo{
+    display:none;
+  }
+
+  .topbar{
+    height:55px;
+  }
+
+  .toolbar{
+    min-height:50px;
+  }
+
+  #viewer{
+    top:137px;
+    padding:10px;
+  }
+
+}
+
+</style>
 </head>
+
 
 <body>
 
-  <div class="topbar">
-    <strong>PDF Editor</strong>
 
-    <label class="upload">
-      Open PDF
-      <input id="file" type="file" accept="application/pdf">
-    </label>
+<!-- =================================
+     TOP BAR
+================================= -->
 
-    <button id="prev">←</button>
-    <span id="page">0 / 0</span>
-    <button id="next">→</button>
+<div class="topbar">
 
-    <button id="download">Download PDF</button>
+  <span class="logo">
+    Smart PDF Editor
+  </span>
+
+
+  <label class="upload">
+
+    📁 Open PDF
+
+    <input
+      id="file"
+      type="file"
+      accept="application/pdf"
+    >
+
+  </label>
+
+
+  <button id="prev">
+    ◀
+  </button>
+
+
+  <span id="pageNumber">
+    0 / 0
+  </span>
+
+
+  <button id="next">
+    ▶
+  </button>
+
+
+  <button
+    id="ocr"
+    class="gray"
+  >
+    OCR
+  </button>
+
+
+  <button
+    id="download"
+    class="green"
+  >
+    Download
+  </button>
+
+</div>
+
+
+<!-- =================================
+     EDIT TOOLBAR
+================================= -->
+
+<div class="toolbar">
+
+  <label>
+
+    Size
+
+    <input
+      id="fontSize"
+      type="number"
+      min="5"
+      max="100"
+      value="16"
+    >
+
+  </label>
+
+
+  <label>
+
+    Font
+
+    <select id="fontFamily">
+
+      <option value="Arial">
+        Arial
+      </option>
+
+      <option value="Times New Roman">
+        Times New Roman
+      </option>
+
+      <option value="Georgia">
+        Georgia
+      </option>
+
+      <option value="Courier New">
+        Courier New
+      </option>
+
+      <option value="Verdana">
+        Verdana
+      </option>
+
+      <option value="Tahoma">
+        Tahoma
+      </option>
+
+    </select>
+
+  </label>
+
+
+  <button id="bold">
+    <b>B</b>
+  </button>
+
+
+  <button id="italic">
+    <i>I</i>
+  </button>
+
+
+  <button id="addText">
+    ＋ Text
+  </button>
+
+
+  <button
+    id="delete"
+    class="red"
+  >
+    Delete
+  </button>
+
+</div>
+
+
+<div id="status">
+  PDF open karein
+</div>
+
+
+<!-- =================================
+     PDF
+================================= -->
+
+<div id="viewer">
+
+  <div id="page">
+
+    <canvas id="pdfCanvas"></canvas>
+
+    <div id="layer"></div>
+
   </div>
 
-  <div id="message">
-    PDF open karein
-  </div>
+</div>
 
-  <main id="viewer">
 
-    <div id="pageBox">
+<script>
 
-      <canvas id="canvas"></canvas>
 
-      <div id="textLayer"></div>
+/* =========================================
+   PDF.JS
+========================================= */
 
-    </div>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-  </main>
 
-  <script src="app.js"></script>
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const fileInput =
+document.getElementById("file");
+
+const canvas =
+document.getElementById("pdfCanvas");
+
+const ctx =
+canvas.getContext("2d");
+
+const pageBox =
+document.getElementById("page");
+
+const layer =
+document.getElementById("layer");
+
+const status =
+document.getElementById("status");
+
+const pageNumber =
+document.getElementById("pageNumber");
+
+const prev =
+document.getElementById("prev");
+
+const next =
+document.getElementById("next");
+
+const ocrButton =
+document.getElementById("ocr");
+
+const download =
+document.getElementById("download");
+
+const fontSizeInput =
+document.getElementById("fontSize");
+
+const fontFamilyInput =
+document.getElementById("fontFamily");
+
+const boldButton =
+document.getElementById("bold");
+
+const italicButton =
+document.getElementById("italic");
+
+const addTextButton =
+document.getElementById("addText");
+
+const deleteButton =
+document.getElementById("delete");
+
+
+/* =========================================
+   VARIABLES
+========================================= */
+
+let pdf = null;
+
+let currentPage = 1;
+
+let totalPages = 0;
+
+
+/*
+  Display scale.
+
+  Larger scale = better editing accuracy.
+*/
+
+const DISPLAY_SCALE = 1.5;
+
+
+/*
+  Download scale.
+
+  2x gives better final quality.
+*/
+
+const EXPORT_SCALE = 2;
+
+
+/*
+  Page objects.
+
+  pages[1] = text objects of page 1
+*/
+
+const pages = {};
+
+
+/*
+  Selected object
+*/
+
+let selected = null;
+
+
+/*
+  Current editing object
+*/
+
+let editing = null;
+
+
+/*
+  Mobile double tap
+*/
+
+let lastTap = 0;
+
+let tapTimeout = null;
+
+
+/* =========================================
+   FILE OPEN
+========================================= */
+
+fileInput.addEventListener(
+"change",
+async function(){
+
+  const file =
+  this.files[0];
+
+  if(!file) return;
+
+
+  try{
+
+    status.textContent =
+    "PDF loading...";
+
+
+    const buffer =
+    await file.arrayBuffer();
+
+
+    pdf =
+    await pdfjsLib.getDocument({
+      data:buffer
+    }).promise;
+
+
+    totalPages =
+    pdf.numPages;
+
+
+    currentPage = 1;
+
+
+    Object.keys(pages)
+      .forEach(
+        key => delete pages[key]
+      );
+
+
+    await renderPage(
+      currentPage
+    );
+
+
+    status.textContent =
+    "Double-click / double-tap text to edit.";
+
+
+  }catch(error){
+
+    console.error(error);
+
+    status.textContent =
+    "PDF open nahi hua.";
+
+  }
+
+});
+
+
+/* =========================================
+   RENDER PAGE
+========================================= */
+
+async function renderPage(
+  pageNo
+){
+
+  if(!pdf) return;
+
+
+  finishEdit();
+
+
+  selected = null;
+
+
+  const pdfPage =
+  await pdf.getPage(
+    pageNo
+  );
+
+
+  const viewport =
+  pdfPage.getViewport({
+    scale:DISPLAY_SCALE
+  });
+
+
+  /*
+    Canvas size
+  */
+
+  canvas.width =
+  Math.ceil(viewport.width);
+
+  canvas.height =
+  Math.ceil(viewport.height);
+
+
+  pageBox.style.width =
+  viewport.width + "px";
+
+  pageBox.style.height =
+  viewport.height + "px";
+
+
+  layer.style.width =
+  viewport.width + "px";
+
+  layer.style.height =
+  viewport.height + "px";
+
+
+  layer.innerHTML = "";
+
+
+  /*
+    Render PDF
+  */
+
+  await pdfPage.render({
+
+    canvasContext:ctx,
+
+    viewport:viewport
+
+  }).promise;
+
+
+  /*
+    Extract text
+  */
+
+  if(!pages[pageNo]){
+
+    pages[pageNo] = [];
+
+    const textContent =
+    await pdfPage.getTextContent();
+
+
+    /*
+      PDF.js font styles
+    */
+
+    const styles =
+    textContent.styles || {};
+
+
+    textContent.items.forEach(
+    (item,index)=>{
+
+      if(
+        !item.str ||
+        !item.str.trim()
+      ){
+        return;
+      }
+
+
+      /*
+        Transform text coordinates.
+      */
+
+      const tx =
+      pdfjsLib.Util.transform(
+        viewport.transform,
+        item.transform
+      );
+
+
+      const x =
+      tx[4];
+
+
+      /*
+        Font height
+      */
+
+      let fontSize =
+      Math.abs(tx[3]);
+
+
+      if(
+        !fontSize ||
+        fontSize < 4
+      ){
+
+        fontSize =
+        item.height ||
+        12;
+
+      }
+
+
+      /*
+        Text top position
+      */
+
+      const y =
+      tx[5] -
+      fontSize;
+
+
+      /*
+        PDF.js style information
+      */
+
+      const style =
+      styles[item.fontName] ||
+      {};
+
+
+      const originalFont =
+      style.fontFamily ||
+      "Arial";
+
+
+      /*
+        Try to detect bold/italic
+        from PDF font name.
+      */
+
+      const fontName =
+      (
+        item.fontName ||
+        ""
+      ).toLowerCase();
+
+
+      const isBold =
+      fontName.includes("bold") ||
+      fontName.includes("black") ||
+      fontName.includes("heavy");
+
+
+      const isItalic =
+      fontName.includes("italic") ||
+      fontName.includes("oblique");
+
+
+      /*
+        Save object
+      */
+
+      pages[pageNo].push({
+
+        id:index,
+
+        original:item.str,
+
+        text:item.str,
+
+        x:x,
+
+        y:y,
+
+        width:
+        Math.max(
+          item.width *
+          DISPLAY_SCALE,
+
+          25
+        ),
+
+        height:
+        Math.max(
+          fontSize * 1.35,
+
+          20
+        ),
+
+        fontSize:fontSize,
+
+        fontFamily:
+        originalFont,
+
+        bold:isBold,
+
+        italic:isItalic,
+
+        color:"#000000",
+
+        deleted:false,
+
+        added:false,
+
+        rotation:0
+
+      });
+
+    });
+
+  }
+
+
+  /*
+    Draw text objects
+  */
+
+  pages[pageNo].forEach(
+    item => {
+
+      if(item.deleted) return;
+
+      createTextElement(
+        item
+      );
+
+    }
+  );
+
+
+  currentPage =
+  pageNo;
+
+
+  pageNumber.textContent =
+  `${currentPage} / ${totalPages}`;
+
+}
+
+
+/* =========================================
+   CREATE TEXT ELEMENT
+========================================= */
+
+function createTextElement(
+  item
+){
+
+  const el =
+  document.createElement(
+    "div"
+  );
+
+
+  el.className =
+  "textObject";
+
+
+  el.dataset.id =
+  item.id;
+
+
+  el.textContent =
+  item.text;
+
+
+  /*
+    Position
+  */
+
+  el.style.left =
+  item.x + "px";
+
+  el.style.top =
+  item.y + "px";
+
+
+  el.style.width =
+  Math.max(
+    item.width,
+    25
+  ) + "px";
+
+
+  el.style.height =
+  Math.max(
+    item.height,
+    20
+  ) + "px";
+
+
+  /*
+    ORIGINAL FONT SIZE
+  */
+
+  el.style.fontSize =
+  item.fontSize + "px";
+
+
+  /*
+    ORIGINAL FONT
+  */
+
+  el.style.fontFamily =
+  getSafeFont(
+    item.fontFamily
+  );
+
+
+  /*
+    ORIGINAL BOLD
+  */
+
+  el.style.fontWeight =
+  item.bold
+    ? "bold"
+    : "normal";
+
+
+  /*
+    ORIGINAL ITALIC
+  */
+
+  el.style.fontStyle =
+  item.italic
+    ? "italic"
+    : "normal";
+
+
+  /*
+    ORIGINAL COLOR
+  */
+
+  el.style.setProperty(
+    "--text-color",
+    item.color
+  );
+
+
+  /* ======================================
+     DESKTOP DOUBLE CLICK
+  ====================================== */
+
+  el.addEventListener(
+    "dblclick",
+    function(e){
+
+      e.preventDefault();
+
+      e.stopPropagation();
+
+      startEdit(
+        el,
+        item
+      );
+
+    }
+  );
+
+
+  /* ======================================
+     MOBILE DOUBLE TAP
+  ====================================== */
+
+  el.addEventListener(
+    "touchend",
+    function(e){
+
+      e.preventDefault();
+
+      e.stopPropagation();
+
+
+      const now =
+      Date.now();
+
+
+      const delta =
+      now - lastTap;
+
+
+      if(
+        delta > 0 &&
+        delta < 500
+      ){
+
+        /*
+          DOUBLE TAP
+        */
+
+        clearTimeout(
+          tapTimeout
+        );
+
+
+        lastTap = 0;
+
+
+        startEdit(
+          el,
+          item
+        );
+
+
+        return;
+
+      }
+
+
+      /*
+        FIRST TAP
+      */
+
+      lastTap = now;
+
+
+      clearTimeout(
+        tapTimeout
+      );
+
+
+      tapTimeout =
+      setTimeout(
+        function(){
+
+          lastTap = 0;
+
+        },
+        500
+      );
+
+    },
+    {
+      passive:false
+    }
+  );
+
+
+  /*
+    Single click selects text.
+  */
+
+  el.addEventListener(
+    "click",
+    function(e){
+
+      e.stopPropagation();
+
+      selectObject(
+        el,
+        item
+      );
+
+    }
+  );
+
+
+  layer.appendChild(
+    el
+  );
+
+}
+
+
+/* =========================================
+   SAFE FONT
+========================================= */
+
+function getSafeFont(
+  font
+){
+
+  const f =
+  (font || "").toLowerCase();
+
+
+  if(
+    f.includes("times") ||
+    f.includes("serif")
+  ){
+
+    return "Times New Roman";
+
+  }
+
+
+  if(
+    f.includes("courier") ||
+    f.includes("mono")
+  ){
+
+    return "Courier New";
+
+  }
+
+
+  if(
+    f.includes("georgia")
+  ){
+
+    return "Georgia";
+
+  }
+
+
+  if(
+    f.includes("verdana")
+  ){
+
+    return "Verdana";
+
+  }
+
+
+  if(
+    f.includes("tahoma")
+  ){
+
+    return "Tahoma";
+
+  }
+
+
+  return "Arial";
+
+}
+
+
+/* =========================================
+   SELECT
+========================================= */
+
+function selectObject(
+  el,
+  item
+){
+
+  /*
+    Remove previous selection
+  */
+
+  document
+    .querySelectorAll(
+      ".textObject"
+    )
+    .forEach(
+      x =>
+      x.style.outline =
+      ""
+    );
+
+
+  selected = {
+
+    element:el,
+
+    item:item
+
+  };
+
+
+  el.style.outline =
+  "1px dashed #2563eb";
+
+
+  /*
+    Toolbar gets ORIGINAL
+    font settings.
+  */
+
+  fontSizeInput.value =
+  Math.round(
+    item.fontSize
+  );
+
+
+  fontFamilyInput.value =
+  getSafeFont(
+    item.fontFamily
+  );
+
+}
+
+
+/* =========================================
+   START EDIT
+========================================= */
+
+function startEdit(
+  el,
+  item
+){
+
+  finishEdit();
+
+
+  selected = {
+
+    element:el,
+
+    item:item
+
+  };
+
+
+  editing = {
+
+    element:el,
+
+    item:item
+
+  };
+
+
+  /*
+    Turn into contenteditable.
+  */
+
+  el.contentEditable =
+  "true";
+
+
+  el.classList.add(
+    "editing"
+  );
+
+
+  /*
+    Preserve ORIGINAL style.
+  */
+
+  el.style.fontSize =
+  item.fontSize + "px";
+
+
+  el.style.fontFamily =
+  getSafeFont(
+    item.fontFamily
+  );
+
+
+  el.style.fontWeight =
+  item.bold
+    ? "bold"
+    : "normal";
+
+
+  el.style.fontStyle =
+  item.italic
+    ? "italic"
+    : "normal";
+
+
+  el.style.color =
+  item.color;
+
+
+  el.style.setProperty(
+    "--text-color",
+    item.color
+  );
+
+
+  /*
+    Wider editing box.
+  */
+
+  el.style.width =
+  Math.max(
+    item.width + 40,
+    80
+  ) + "px";
+
+
+  /*
+    Focus.
+  */
+
+  setTimeout(
+    ()=>{
+
+      el.focus();
+
+
+      /*
+        Select entire original text.
+      */
+
+      const range =
+      document.createRange();
+
+
+      range.selectNodeContents(
+        el
+      );
+
+
+      const selection =
+      window.getSelection();
+
+
+      selection.removeAllRanges();
+
+      selection.addRange(
+        range
+      );
+
+    },
+    50
+  );
+
+
+  /*
+    Enter = save.
+  */
+
+  el.addEventListener(
+    "keydown",
+    editKey,
+    false
+  );
+
+
+  status.textContent =
+  "Text edit mode";
+
+}
+
+
+/* =========================================
+   KEY HANDLER
+========================================= */
+
+function editKey(
+  e
+){
+
+  if(e.key === "Enter"){
+
+    e.preventDefault();
+
+    finishEdit();
+
+  }
+
+
+  if(e.key === "Escape"){
+
+    e.preventDefault();
+
+    cancelEdit();
+
+  }
+
+}
+
+
+/* =========================================
+   FINISH EDIT
+========================================= */
+
+function finishEdit(){
+
+  if(!editing) return;
+
+
+  const el =
+  editing.element;
+
+  const item =
+  editing.item;
+
+
+  const value =
+  el.innerText
+    .replace(/\n/g," ")
+    .trim();
+
+
+  if(value){
+
+    item.text =
+    value;
+
+  }
+
+
+  /*
+    Mark changed.
+
+    Original text stays in
+    the PDF underneath.
+  */
+
+  if(
+    item.text !==
+    item.original
+  ){
+
+    el.classList.add(
+      "changed"
+    );
+
+  }
+
+
+  el.contentEditable =
+  "false";
+
+
+  el.classList.remove(
+    "editing"
+  );
+
+
+  el.removeEventListener(
+    "keydown",
+    editKey
+  );
+
+
+  /*
+    Restore exact original style.
+  */
+
+  el.style.fontSize =
+  item.fontSize + "px";
+
+
+  el.style.fontFamily =
+  getSafeFont(
+    item.fontFamily
+  );
+
+
+  el.style.fontWeight =
+  item.bold
+    ? "bold"
+    : "normal";
+
+
+  el.style.fontStyle =
+  item.italic
+    ? "italic"
+    : "normal";
+
+
+  el.style.color =
+  item.color;
+
+
+  editing = null;
+
+
+  status.textContent =
+  "Text saved ✓";
+
+}
+
+
+/* =========================================
+   CANCEL
+========================================= */
+
+function cancelEdit(){
+
+  if(!editing) return;
+
+
+  const el =
+  editing.element;
+
+  const item =
+  editing.item;
+
+
+  el.textContent =
+  item.text;
+
+
+  el.contentEditable =
+  "false";
+
+
+  el.classList.remove(
+    "editing"
+  );
+
+
+  el.classList.remove(
+    "changed"
+  );
+
+
+  el.style.color =
+  "transparent";
+
+
+  editing = null;
+
+}
+
+
+/* =========================================
+   FONT SIZE
+========================================= */
+
+fontSizeInput.addEventListener(
+  "change",
+  function(){
+
+    if(!selected) return;
+
+
+    const size =
+    Number(
+      this.value
+    );
+
+
+    selected.item.fontSize =
+    size;
+
+
+    selected.element.style.fontSize =
+    size + "px";
+
+  }
+);
+
+
+/* =========================================
+   FONT
+========================================= */
+
+fontFamilyInput.addEventListener(
+  "change",
+  function(){
+
+    if(!selected) return;
+
+
+    const font =
+    this.value;
+
+
+    selected.item.fontFamily =
+    font;
+
+
+    selected.element.style.fontFamily =
+    font;
+
+  }
+);
+
+
+/* =========================================
+   BOLD
+========================================= */
+
+boldButton.addEventListener(
+  "click",
+  function(){
+
+    if(!selected) return;
+
+
+    selected.item.bold =
+    !selected.item.bold;
+
+
+    selected.element.style.fontWeight =
+    selected.item.bold
+      ? "bold"
+      : "normal";
+
+  }
+);
+
+
+/* =========================================
+   ITALIC
+========================================= */
+
+italicButton.addEventListener(
+  "click",
+  function(){
+
+    if(!selected) return;
+
+
+    selected.item.italic =
+    !selected.item.italic;
+
+
+    selected.element.style.fontStyle =
+    selected.item.italic
+      ? "italic"
+      : "normal";
+
+  }
+);
+
+
+/* =========================================
+   DELETE
+========================================= */
+
+deleteButton.addEventListener(
+  "click",
+  function(){
+
+    if(!selected){
+
+      alert(
+        "Text select karein."
+      );
+
+      return;
+
+    }
+
+
+    selected.item.deleted =
+    true;
+
+
+    selected.element.remove();
+
+
+    selected = null;
+
+
+    status.textContent =
+    "Text deleted.";
+
+  }
+);
+
+
+/* =========================================
+   ADD TEXT
+========================================= */
+
+addTextButton.addEventListener(
+  "click",
+  function(){
+
+    if(!pdf) return;
+
+
+    const item = {
+
+      id:
+      "new-" +
+      Date.now(),
+
+      original:"",
+
+      text:"New Text",
+
+      x:100,
+
+      y:100,
+
+      width:120,
+
+      height:30,
+
+      fontSize:18,
+
+      fontFamily:"Arial",
+
+      bold:false,
+
+      italic:false,
+
+      color:"#000000",
+
+      deleted:false,
+
+      added:true
+
+    };
+
+
+    pages[currentPage].push(
+      item
+    );
+
+
+    const el =
+    document.createElement(
+      "div"
+    );
+
+
+    el.className =
+    "textObject changed";
+
+
+    el.dataset.id =
+    item.id;
+
+
+    el.textContent =
+    item.text;
+
+
+    el.style.left =
+    item.x + "px";
+
+
+    el.style.top =
+    item.y + "px";
+
+
+    el.style.width =
+    item.width + "px";
+
+
+    el.style.height =
+    item.height + "px";
+
+
+    el.style.fontSize =
+    item.fontSize + "px";
+
+
+    el.style.fontFamily =
+    "Arial";
+
+
+    el.style.color =
+    "#000";
+
+
+    el.style.background =
+    "#fff";
+
+
+    layer.appendChild(
+      el
+    );
+
+
+    selected = {
+
+      element:el,
+
+      item:item
+
+    };
+
+
+    startEdit(
+      el,
+      item
+    );
+
+  }
+);
+
+
+/* =========================================
+   PREVIOUS
+========================================= */
+
+prev.addEventListener(
+  "click",
+  async function(){
+
+    if(!pdf) return;
+
+    if(currentPage <= 1) return;
+
+
+    await renderPage(
+      currentPage - 1
+    );
+
+  }
+);
+
+
+/* =========================================
+   NEXT
+========================================= */
+
+next.addEventListener(
+  "click",
+  async function(){
+
+    if(!pdf) return;
+
+    if(
+      currentPage >= totalPages
+    ) return;
+
+
+    await renderPage(
+      currentPage + 1
+    );
+
+  }
+);
+
+
+/* =========================================
+   OCR
+========================================= */
+
+ocrButton.addEventListener(
+  "click",
+  async function(){
+
+    if(!pdf) return;
+
+
+    finishEdit();
+
+
+    status.textContent =
+    "OCR running...";
+
+
+    try{
+
+      const pdfPage =
+      await pdf.getPage(
+        currentPage
+      );
+
+
+      const viewport =
+      pdfPage.getViewport({
+        scale:2
+      });
+
+
+      const ocrCanvas =
+      document.createElement(
+        "canvas"
+      );
+
+
+      ocrCanvas.width =
+      viewport.width;
+
+      ocrCanvas.height =
+      viewport.height;
+
+
+      const ocrCtx =
+      ocrCanvas.getContext(
+        "2d"
+      );
+
+
+      await pdfPage.render({
+
+        canvasContext:
+        ocrCtx,
+
+        viewport:
+        viewport
+
+      }).promise;
+
+
+      const result =
+      await Tesseract.recognize(
+        ocrCanvas,
+        "eng",
+        {
+
+          logger:
+          function(info){
+
+            if(
+              info.status ===
+              "recognizing text"
+            ){
+
+              status.textContent =
+              "OCR " +
+              Math.round(
+                info.progress * 100
+              ) +
+              "%";
+
+            }
+
+          }
+
+        }
+      );
+
+
+      /*
+        Remove old OCR items.
+      */
+
+      const words =
+      result.data.words || [];
+
+
+      /*
+        Add OCR words to page.
+      */
+
+      words.forEach(
+      (word,index)=>{
+
+        if(
+          !word.text ||
+          !word.text.trim()
+        ){
+          return;
+        }
+
+
+        /*
+          Convert OCR 2x coordinates
+          to display scale.
+        */
+
+        const factor =
+        DISPLAY_SCALE / 2;
+
+
+        const x =
+        word.bbox.x0 *
+        factor;
+
+
+        const y =
+        word.bbox.y0 *
+        factor;
+
+
+        const width =
+        (
+          word.bbox.x1 -
+          word.bbox.x0
+        ) * factor;
+
+
+        const height =
+        (
+          word.bbox.y1 -
+          word.bbox.y0
+        ) * factor;
+
+
+        const item = {
+
+          id:
+          "ocr-" +
+          Date.now() +
+          "-" +
+          index,
+
+          original:
+          word.text,
+
+          text:
+          word.text,
+
+          x:x,
+
+          y:y,
+
+          width:
+          Math.max(
+            width,
+            20
+          ),
+
+          height:
+          Math.max(
+            height,
+            20
+          ),
+
+          fontSize:
+          Math.max(
+            height * .8,
+            8
+          ),
+
+          fontFamily:
+          "Arial",
+
+          bold:false,
+
+          italic:false,
+
+          color:"#000000",
+
+          deleted:false,
+
+          added:false,
+
+          ocr:true
+
+        };
+
+
+        pages[currentPage].push(
+          item
+        );
+
+
+        createTextElement(
+          item
+        );
+
+      });
+
+
+      status.textContent =
+      `OCR complete: ${words.length} text areas found.`;
+
+    }
+    catch(error){
+
+      console.error(error);
+
+      status.textContent =
+      "OCR failed.";
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   SAMPLE BACKGROUND COLOR
+========================================= */
+
+function sampleBackground(
+  context,
+  x,
+  y,
+  w,
+  h
+){
+
+  /*
+    For white pay-slip/background,
+    this gives clean replacement.
+
+    For complex backgrounds,
+    average border color is used.
+  */
+
+  const points = [
+
+    [x + 2, y + 2],
+
+    [x + w - 2, y + 2],
+
+    [x + 2, y + h - 2],
+
+    [x + w - 2, y + h - 2]
+
+  ];
+
+
+  let r=0;
+  let g=0;
+  let b=0;
+  let count=0;
+
+
+  points.forEach(
+  p=>{
+
+    try{
+
+      const data =
+      context.getImageData(
+        Math.max(0,p[0]),
+        Math.max(0,p[1]),
+        1,
+        1
+      ).data;
+
+
+      r += data[0];
+
+      g += data[1];
+
+      b += data[2];
+
+      count++;
+
+    }catch(e){}
+
+  });
+
+
+  if(!count){
+
+    return "#ffffff";
+
+  }
+
+
+  return `rgb(
+    ${Math.round(r/count)},
+    ${Math.round(g/count)},
+    ${Math.round(b/count)}
+  )`;
+
+}
+
+
+/* =========================================
+   EXPORT PDF
+========================================= */
+
+download.addEventListener(
+  "click",
+  async function(){
+
+    if(!pdf){
+
+      alert(
+        "Pehle PDF open karein."
+      );
+
+      return;
+
+    }
+
+
+    finishEdit();
+
+
+    status.textContent =
+    "PDF create ho raha hai...";
+
+
+    try{
+
+      const {
+        jsPDF
+      } = window.jspdf;
+
+
+      let output = null;
+
+
+      /*
+        Every PDF page
+      */
+
+      for(
+        let number=1;
+        number<=totalPages;
+        number++
+      ){
+
+        status.textContent =
+        `Page ${number}/${totalPages} processing...`;
+
+
+        const pdfPage =
+        await pdf.getPage(
+          number
+        );
+
+
+        /*
+          High quality render
+        */
+
+        const viewport =
+        pdfPage.getViewport({
+          scale:EXPORT_SCALE
+        });
+
+
+        const exportCanvas =
+        document.createElement(
+          "canvas"
+        );
+
+
+        exportCanvas.width =
+        Math.ceil(
+          viewport.width
+        );
+
+        exportCanvas.height =
+        Math.ceil(
+          viewport.height
+        );
+
+
+        const exportCtx =
+        exportCanvas.getContext(
+          "2d"
+        );
+
+
+        /*
+          Original PDF page
+        */
+
+        await pdfPage.render({
+
+          canvasContext:
+          exportCtx,
+
+          viewport:
+          viewport
+
+        }).promise;
+
+
+        /*
+          Page objects
+        */
+
+        const objects =
+        pages[number] || [];
+
+
+        /*
+          Apply changes
+        */
+
+        objects.forEach(
+        item=>{
+
+          /*
+            Deleted text
+          */
+
+          if(item.deleted){
+
+            coverText(
+              exportCtx,
+              item
+            );
+
+            return;
+
+          }
+
+
+          /*
+            New or changed text
+          */
+
+          if(
+            item.added ||
+            item.text !==
+            item.original
+          ){
+
+            coverText(
+              exportCtx,
+              item
+            );
+
+
+            drawText(
+              exportCtx,
+              item
+            );
+
+          }
+
+        });
+
+
+        /*
+          Convert canvas to image
+        */
+
+        const image =
+        exportCanvas.toDataURL(
+          "image/jpeg",
+          .95
+        );
+
+
+        /*
+          PDF dimensions
+          are in points.
+        */
+
+        const width =
+        viewport.width /
+        EXPORT_SCALE;
+
+
+        const height =
+        viewport.height /
+        EXPORT_SCALE;
+
+
+        if(!output){
+
+          output =
+          new jsPDF({
+
+            unit:"pt",
+
+            format:[
+              width,
+              height
+            ],
+
+            orientation:
+            width > height
+              ? "landscape"
+              : "portrait"
+
+          });
+
+        }
+        else{
+
+          output.addPage([
+            width,
+            height
+          ]);
+
+        }
+
+
+        output.addImage(
+          image,
+          "JPEG",
+          0,
+          0,
+          width,
+          height
+        );
+
+      }
+
+
+      output.save(
+        "edited-pdf.pdf"
+      );
+
+
+      status.textContent =
+      "PDF downloaded ✓";
+
+
+    }
+    catch(error){
+
+      console.error(error);
+
+      status.textContent =
+      "Download failed.";
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   COVER OLD TEXT
+========================================= */
+
+function coverText(
+  context,
+  item
+){
+
+  const factor =
+  EXPORT_SCALE /
+  DISPLAY_SCALE;
+
+
+  const x =
+  item.x *
+  factor;
+
+
+  const y =
+  item.y *
+  factor;
+
+
+  const width =
+  Math.max(
+    item.width *
+    factor,
+
+    25
+  );
+
+
+  const height =
+  Math.max(
+    item.height *
+    factor,
+
+    20
+  );
+
+
+  /*
+    Determine background.
+  */
+
+  const background =
+  sampleBackground(
+    context,
+    x,
+    y,
+    width,
+    height
+  );
+
+
+  context.fillStyle =
+  background;
+
+
+  /*
+    Slightly larger area
+    removes old characters.
+  */
+
+  context.fillRect(
+
+    x - 2,
+
+    y - 2,
+
+    width + 5,
+
+    height + 5
+
+  );
+
+}
+
+
+/* =========================================
+   DRAW NEW TEXT
+========================================= */
+
+function drawText(
+  context,
+  item
+){
+
+  const factor =
+  EXPORT_SCALE /
+  DISPLAY_SCALE;
+
+
+  const x =
+  item.x *
+  factor;
+
+
+  const y =
+  item.y *
+  factor;
+
+
+  const size =
+  item.fontSize *
+  factor;
+
+
+  /*
+    Font style
+  */
+
+  let style = "";
+
+
+  if(item.italic){
+
+    style +=
+    "italic ";
+
+  }
+
+
+  if(item.bold){
+
+    style +=
+    "bold ";
+
+  }
+
+
+  /*
+    Original/closest font
+  */
+
+  const font =
+  getSafeFont(
+    item.fontFamily
+  );
+
+
+  context.font =
+  `${style}${size}px "${font}"`;
+
+
+  context.fillStyle =
+  item.color ||
+  "#000000";
+
+
+  context.textBaseline =
+  "top";
+
+
+  /*
+    New text
+  */
+
+  context.fillText(
+
+    item.text,
+
+    x,
+
+    y
+
+  );
+
+}
+
+
+/* =========================================
+   SAVE BEFORE PAGE CHANGE
+========================================= */
+
+window.addEventListener(
+  "beforeunload",
+  function(){
+
+    finishEdit();
+
+  }
+);
+
+
+</script>
 
 </body>
 </html>
