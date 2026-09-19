@@ -1,16 +1,18 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>PDF to Text Editor</title>
+    <title>PDF Visual Editor</title>
 
     <link rel="stylesheet" href="style.css">
 
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Fabric.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,102 +20,84 @@
 
 <body>
 
-    <header class="header">
-        <h1>PDF to Text Editor</h1>
-        <p>Upload, extract, edit and generate your PDF</p>
-    </header>
+<header>
+    <h1>PDF Visual Editor</h1>
+    <p>Edit text, add images and generate PDF</p>
+</header>
 
-    <main class="container">
+<div class="toolbar">
 
-        <!-- Toolbar -->
-        <div class="toolbar">
+    <label class="button primary">
+        📁 Open PDF
+        <input type="file" id="pdfInput" accept=".pdf">
+    </label>
 
-            <label for="pdfFile" class="btn upload-btn">
-                📁 Upload PDF
-            </label>
+    <button class="button" id="addText">
+        ＋ Text
+    </button>
 
-            <input
-                type="file"
-                id="pdfFile"
-                accept=".pdf,application/pdf"
-            >
+    <label class="button">
+        🖼 Add Image
+        <input type="file" id="imageInput" accept="image/*">
+    </label>
 
-            <button id="extractBtn" class="btn">
-                Extract Text
-            </button>
+    <button class="button danger" id="deleteObject">
+        🗑 Delete
+    </button>
 
-            <button id="downloadTxtBtn" class="btn green">
-                Download TXT
-            </button>
+    <button class="button" id="prevPage">
+        ◀ Previous
+    </button>
 
-            <button id="downloadPdfBtn" class="btn blue">
-                Download PDF
-            </button>
+    <span id="pageInfo">Page 0 / 0</span>
 
-            <button id="clearBtn" class="btn red">
-                Clear
-            </button>
+    <button class="button" id="nextPage">
+        Next ▶
+    </button>
 
-        </div>
+    <button class="button success" id="downloadPdf">
+        ⬇ Download PDF
+    </button>
 
-        <!-- Status -->
-        <div id="status" class="status">
-            No PDF selected.
-        </div>
+</div>
 
-        <!-- Main Editor -->
-        <section class="editor-section">
+<div class="properties">
 
-            <!-- PDF Preview -->
-            <div class="panel">
+    <label>
+        Text:
+        <input type="text" id="textValue">
+    </label>
 
-                <div class="panel-title">
-                    <h2>PDF Preview</h2>
-                </div>
+    <label>
+        Font Size:
+        <input type="number" id="fontSize" value="18" min="6" max="100">
+    </label>
 
-                <div id="pdfPreview" class="pdf-preview">
-                    <div class="empty">
-                        <div class="empty-icon">📄</div>
-                        <p>Select a PDF file to preview it here.</p>
-                    </div>
-                </div>
+    <button class="button" id="boldBtn">
+        <b>B</b>
+    </button>
 
-            </div>
+    <button class="button" id="italicBtn">
+        <i>I</i>
+    </button>
 
-            <!-- Text Editor -->
-            <div class="panel">
+</div>
 
-                <div class="editor-top">
+<main>
 
-                    <h2>Text Editor</h2>
+    <div class="editor-wrapper">
 
-                    <div class="stats">
-                        Words:
-                        <span id="wordCount">0</span>
-                        |
-                        Characters:
-                        <span id="charCount">0</span>
-                    </div>
+        <canvas id="editorCanvas"></canvas>
 
-                </div>
+    </div>
 
-                <textarea
-                    id="textEditor"
-                    placeholder="Extracted PDF text will appear here..."
-                    spellcheck="false"
-                ></textarea>
+</main>
 
-            </div>
+<div id="message">
+    Upload a PDF to start editing.
+</div>
 
-        </section>
-
-    </main>
-
-    <footer>
-        <p>PDF to Text Editor © 2026</p>
-    </footer>
-
-    <script src="app.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
