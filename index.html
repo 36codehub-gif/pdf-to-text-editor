@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  >
+
+  <title>PDF Editor</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <strong>PDF Editor</strong>
+
+    <label class="upload">
+      Open PDF
+      <input id="file" type="file" accept="application/pdf">
+    </label>
+
+    <button id="prev">←</button>
+    <span id="page">0 / 0</span>
+    <button id="next">→</button>
+
+    <button id="download">Download PDF</button>
+  </div>
+
+  <div id="message">
+    PDF open karein
+  </div>
+
+  <main id="viewer">
+
+    <div id="pageBox">
+
+      <canvas id="canvas"></canvas>
+
+      <div id="textLayer"></div>
+
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
