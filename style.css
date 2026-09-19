@@ -1,77 +1,196 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+
+  width: 100%;
+  height: 100%;
+
+  font-family: Arial, sans-serif;
+
+  background: #e5e7eb;
+}
+
+body {
+  overflow: hidden;
+}
+
+.topbar {
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 10px;
+
+  background: #111827;
+  color: white;
+
+  overflow-x: auto;
+}
+
+.topbar strong {
+  white-space: nowrap;
+  margin-right: 5px;
+}
+
+button,
+.upload {
+  border: 0;
+  border-radius: 6px;
+
+  background: #2563eb;
+  color: white;
+
+  padding: 9px 12px;
+
+  font-size: 14px;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  touch-action: manipulation;
+}
+
+button:active,
+.upload:active {
+  transform: scale(.97);
+}
+
+.upload input {
+  display: none;
+}
+
+#download {
+  background: #16a34a;
+}
+
+#message {
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: white;
+
+  color: #374151;
+
+  font-size: 13px;
+}
+
+#viewer {
+  position: absolute;
+
+  top: 92px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  overflow: auto;
+
+  padding: 20px;
+
+  text-align: center;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+#pageBox {
+  position: relative;
+
+  display: inline-block;
+
+  background: white;
+
+  box-shadow:
+    0 5px 25px rgba(0,0,0,.25);
+
+  text-align: left;
+
+  touch-action: manipulation;
+}
+
+#canvas {
+  display: block;
+}
+
 #textLayer {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+  position: absolute;
 
-    /*
-      Mobile double tap ke liye important
-    */
-    touch-action: manipulation;
+  left: 0;
+  top: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  /*
+    VERY IMPORTANT
+  */
+  touch-action: manipulation;
 }
 
-.pdf-text {
-    position: absolute;
+.pdfText {
+  position: absolute;
 
-    white-space: pre;
+  display: block;
 
-    cursor: text;
+  margin: 0;
+  padding: 0;
 
-    /*
-      Touch/click ko allow kare
-    */
-    pointer-events: auto;
+  white-space: pre;
 
-    user-select: none;
+  /*
+    Text itself transparent because
+    original PDF is underneath.
+  */
+  color: transparent;
 
-    -webkit-user-select: none;
+  background: transparent;
 
-    touch-action: manipulation;
+  border: 0;
 
-    transform-origin: left top;
+  cursor: text;
 
-    z-index: 5;
+  user-select: none;
+  -webkit-user-select: none;
+
+  pointer-events: auto;
+
+  touch-action: manipulation;
+
+  z-index: 10;
 }
 
-.pdf-text:hover {
-    background: rgba(37, 99, 235, 0.12);
-}
+.pdfText.editing {
+  color: #000;
 
-.pdf-text.selected {
-    outline: 1px dashed #2563eb;
+  background: white;
 
-    background: rgba(37, 99, 235, 0.15);
-}
+  border: 2px solid #2563eb;
 
-.editBox {
-    position: absolute;
+  border-radius: 3px;
 
-    z-index: 9999;
+  padding: 2px 4px;
 
-    box-sizing: border-box;
+  min-width: 30px;
 
-    background: white;
+  min-height: 24px;
 
-    color: #000;
+  outline: none;
 
-    border: 2px solid #2563eb;
+  user-select: text;
+  -webkit-user-select: text;
 
-    border-radius: 4px;
+  touch-action: manipulation;
 
-    outline: none;
-
-    padding: 3px 5px;
-
-    /*
-      Mobile keyboard/touch
-    */
-    pointer-events: auto;
-
-    user-select: text;
-
-    -webkit-user-select: text;
-
-    touch-action: manipulation;
+  z-index: 1000;
 }
