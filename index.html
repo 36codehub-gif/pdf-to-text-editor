@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Text Editor</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <h1>PDF to Text Editor</h1>
+        <p>Upload a PDF, extract its text, and edit it.</p>
+    </header>
+
+    <main class="container">
+
+        <section class="toolbar">
+            <label for="pdfFile" class="upload-btn">
+                Upload PDF
+            </label>
+
+            <input type="file" id="pdfFile" accept=".pdf">
+
+            <button id="extractBtn">Extract Text</button>
+            <button id="clearBtn">Clear</button>
+            <button id="downloadBtn">Download TXT</button>
+        </section>
+
+        <section class="editor-section">
+
+            <div class="pdf-panel">
+                <h2>PDF Preview</h2>
+
+                <div id="pdfPreview">
+                    <p>Select a PDF file to preview it here.</p>
+                </div>
+            </div>
+
+            <div class="text-panel">
+                <div class="editor-header">
+                    <h2>Text Editor</h2>
+
+                    <div class="stats">
+                        Words: <span id="wordCount">0</span>
+                    </div>
+                </div>
+
+                <textarea
+                    id="textEditor"
+                    placeholder="Extracted PDF text will appear here..."
+                ></textarea>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>PDF to Text Editor &copy; 2026</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
