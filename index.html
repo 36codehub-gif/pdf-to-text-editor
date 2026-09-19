@@ -1,59 +1,108 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>PDF to Text Editor</title>
+
     <link rel="stylesheet" href="style.css">
 
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
 
-    <header>
+    <header class="header">
         <h1>PDF to Text Editor</h1>
-        <p>Upload a PDF, extract its text, and edit it.</p>
+        <p>Upload, extract, edit and generate your PDF</p>
     </header>
 
     <main class="container">
 
-        <section class="toolbar">
-            <label for="pdfFile" class="upload-btn">
-                Upload PDF
+        <!-- Toolbar -->
+        <div class="toolbar">
+
+            <label for="pdfFile" class="btn upload-btn">
+                📁 Upload PDF
             </label>
 
-            <input type="file" id="pdfFile" accept=".pdf">
+            <input
+                type="file"
+                id="pdfFile"
+                accept=".pdf,application/pdf"
+            >
 
-            <button id="extractBtn">Extract Text</button>
-            <button id="clearBtn">Clear</button>
-            <button id="downloadBtn">Download TXT</button>
-        </section>
+            <button id="extractBtn" class="btn">
+                Extract Text
+            </button>
 
+            <button id="downloadTxtBtn" class="btn green">
+                Download TXT
+            </button>
+
+            <button id="downloadPdfBtn" class="btn blue">
+                Download PDF
+            </button>
+
+            <button id="clearBtn" class="btn red">
+                Clear
+            </button>
+
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="status">
+            No PDF selected.
+        </div>
+
+        <!-- Main Editor -->
         <section class="editor-section">
 
-            <div class="pdf-panel">
-                <h2>PDF Preview</h2>
+            <!-- PDF Preview -->
+            <div class="panel">
 
-                <div id="pdfPreview">
-                    <p>Select a PDF file to preview it here.</p>
+                <div class="panel-title">
+                    <h2>PDF Preview</h2>
                 </div>
+
+                <div id="pdfPreview" class="pdf-preview">
+                    <div class="empty">
+                        <div class="empty-icon">📄</div>
+                        <p>Select a PDF file to preview it here.</p>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="text-panel">
-                <div class="editor-header">
+            <!-- Text Editor -->
+            <div class="panel">
+
+                <div class="editor-top">
+
                     <h2>Text Editor</h2>
 
                     <div class="stats">
-                        Words: <span id="wordCount">0</span>
+                        Words:
+                        <span id="wordCount">0</span>
+                        |
+                        Characters:
+                        <span id="charCount">0</span>
                     </div>
+
                 </div>
 
                 <textarea
                     id="textEditor"
                     placeholder="Extracted PDF text will appear here..."
+                    spellcheck="false"
                 ></textarea>
+
             </div>
 
         </section>
@@ -61,9 +110,10 @@
     </main>
 
     <footer>
-        <p>PDF to Text Editor &copy; 2026</p>
+        <p>PDF to Text Editor © 2026</p>
     </footer>
 
     <script src="app.js"></script>
+
 </body>
 </html>
