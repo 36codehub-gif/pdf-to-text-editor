@@ -1,182 +1,369 @@
+
+// ==========================================
+// PDF TO TEXT EDITOR
+// ==========================================
+
+// HTML elements
+
 const pdfFile = document.getElementById("pdfFile");
+
 const extractBtn = document.getElementById("extractBtn");
-const clearBtn = document.getElementById("clearBtn");
-const downloadBtn = document.getElementById("downloadBtn");
 
-const pdfPreview = document.getElementById("pdfPreview");
-const textEditor = document.getElementById("textEditor");
-const wordCount = document.getElementById("wordCount");
+const downloadTxtBtn =
+    document.getElementById("downloadTxtBtn");
 
-// Configure PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const downloadPdfBtn =
+    document.getElementById("downloadPdfBtn");
+
+const clearBtn =
+    document.getElementById("clearBtn");
+
+const pdfPreview =
+    document.getElementById("pdfPreview");
+
+const textEditor =
+    document.getElementById("textEditor");
+
+const wordCount =
+    document.getElementById("wordCount");
+
+const charCount =
+    document.getElementById("charCount");
+
+const status =
+    document.getElementById("status");
+
+
+// Selected PDF
 
 let selectedFile = null;
 
-// Select PDF
+
+// ==========================================
+// PDF.js configuration
+// ==========================================
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+
+// ==========================================
+// File Selection
+// ==========================================
+
 pdfFile.addEventListener("change", function () {
 
-    selectedFile = this.files[0];
+    const file = this.files[0];
 
-    if (!selectedFile) {
+    if (!file) {
         return;
     }
 
-    if (selectedFile.type !== "application/pdf") {
-        alert("Please select a PDF file.");
+    if (file.type !== "application/pdf") {
+
+        alert("Please select a valid PDF file.");
+
+        pdfFile.value = "";
+
         return;
     }
 
-    previewPDF(selectedFile);
+    selectedFile = file;
+
+    status.textContent =
+        "Selected: " + file.name;
+
+    previewPDF(file);
+
 });
 
-// Preview PDF
+
+// ==========================================
+// PDF Preview
+// ==========================================
+
 async function previewPDF(file) {
 
     pdfPreview.innerHTML = "";
 
-    const fileURL = URL.createObjectURL(file);
+    status.textContent =
+        "Loading PDF preview...";
 
     try {
 
-        const pdf = await pdfjsLib.getDocument(fileURL).promise;
+        const arrayBuffer =
+            await file.arrayBuffer();
 
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const pdf =
+            await pdfjsLib.getDocument({
+                data: arrayBuffer
+            }).promise;
 
-            const page = await pdf.getPage(pageNumber);
 
-            const viewport = page.getViewport({
-                scale: 1.2
-            });
+        for (
+            let pageNumber = 1;
+            pageNumber <= pdf.numPages;
+            pageNumber++
+        ) {
 
-            const canvas = document.createElement("canvas");
+            const page =
+                await pdf.getPage(pageNumber);
 
-            canvas.className = "pdf-page";
 
-            const context = canvas.getContext("2d");
+            const viewport =
+                page.getViewport({
+                    scale: 1.2
+                });
 
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
+
+            const canvas =
+                document.createElement("canvas");
+
+
+            canvas.className =
+                "pdf-page";
+
+
+            const context =
+                canvas.getContext("2d");
+
+
+            canvas.width =
+                viewport.width;
+
+            canvas.height =
+                viewport.height;
+
 
             await page.render({
                 canvasContext: context,
                 viewport: viewport
             }).promise;
 
+
             pdfPreview.appendChild(canvas);
+
         }
 
-    } catch (error) {
+
+        status.textContent =
+            `${pdf.numPages} page(s) loaded.`;
+
+    }
+
+    catch (error) {
 
         console.error(error);
 
-        pdfPreview.innerHTML =
-            "<p>Unable to display this PDF.</p>";
+        pdfPreview.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">⚠️</div>
+                <p>Unable to preview this PDF.</p>
+            </div>
+        `;
+
+        status.textContent =
+            "Error loading PDF.";
+
     }
+
 }
 
-// Extract text
-extractBtn.addEventListener("click", async function () {
+
+// ==========================================
+// Extract PDF Text
+// ==========================================
+
+extractBtn.addEventListener(
+    "click",
+    extractText
+);
+
+
+async function extractText() {
 
     if (!selectedFile) {
+
         alert("Please upload a PDF first.");
+
         return;
     }
 
-    textEditor.value = "Extracting text...\n\n";
 
-    try {
-
-        const arrayBuffer = await selectedFile.arrayBuffer();
-
-        const pdf = await pdfjsLib.getDocument({
-            data: arrayBuffer
-        }).promise;
-
-        let completeText = "";
-
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-
-            const page = await pdf.getPage(pageNumber);
-
-            const textContent = await page.getTextContent();
-
-            const pageText = textContent.items
-                .map(item => item.str)
-                .join(" ");
-
-            completeText +=
-                `\n--- Page ${pageNumber} ---\n\n`;
-
-            completeText += pageText + "\n";
-        }
-
-        textEditor.value = completeText;
-
-        updateWordCount();
-
-    } catch (error) {
-
-        console.error(error);
-
-        textEditor.value =
-            "Error: Could not extract text from this PDF.";
-    }
-});
-
-// Update word count
-textEditor.addEventListener("input", updateWordCount);
-
-function updateWordCount() {
-
-    const text = textEditor.value.trim();
-
-    if (text === "") {
-        wordCount.textContent = "0";
-        return;
-    }
-
-    const words = text.split(/\s+/);
-
-    wordCount.textContent = words.length;
-}
-
-// Clear editor
-clearBtn.addEventListener("click", function () {
+    status.textContent =
+        "Extracting text...";
 
     textEditor.value = "";
 
-    pdfPreview.innerHTML =
-        "<p>Select a PDF file to preview it here.</p>";
 
-    pdfFile.value = "";
+    try {
 
-    selectedFile = null;
+        const arrayBuffer =
+            await selectedFile.arrayBuffer();
 
-    updateWordCount();
-});
 
-// Download text
-downloadBtn.addEventListener("click", function () {
+        const pdf =
+            await pdfjsLib.getDocument({
+                data: arrayBuffer
+            }).promise;
 
-    const text = textEditor.value;
 
-    if (text.trim() === "") {
-        alert("There is no text to download.");
+        let completeText = "";
+
+
+        for (
+            let pageNumber = 1;
+            pageNumber <= pdf.numPages;
+            pageNumber++
+        ) {
+
+            const page =
+                await pdf.getPage(pageNumber);
+
+
+            const textContent =
+                await page.getTextContent();
+
+
+            const pageText =
+                textContent.items
+                    .map(item => item.str)
+                    .join(" ");
+
+
+            completeText +=
+                `--- Page ${pageNumber} ---\n\n`;
+
+            completeText +=
+                pageText.trim();
+
+            completeText +=
+                "\n\n";
+
+        }
+
+
+        textEditor.value =
+            completeText.trim();
+
+
+        updateStats();
+
+
+        status.textContent =
+            "Text extraction completed successfully.";
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        textEditor.value = "";
+
+        status.textContent =
+            "Unable to extract text.";
+
+        alert(
+            "Text extraction failed. This may be a scanned/image-only PDF."
+        );
+
+    }
+
+}
+
+
+// ==========================================
+// Word & Character Count
+// ==========================================
+
+textEditor.addEventListener(
+    "input",
+    updateStats
+);
+
+
+function updateStats() {
+
+    const text =
+        textEditor.value.trim();
+
+
+    // Character count
+
+    charCount.textContent =
+        textEditor.value.length;
+
+
+    // Word count
+
+    if (text === "") {
+
+        wordCount.textContent = "0";
+
         return;
     }
 
-    const blob = new Blob(
-        [text],
-        { type: "text/plain;charset=utf-8" }
-    );
 
-    const url = URL.createObjectURL(blob);
+    const words =
+        text.split(/\s+/);
 
-    const link = document.createElement("a");
+
+    wordCount.textContent =
+        words.length;
+
+}
+
+
+// ==========================================
+// Download TXT
+// ==========================================
+
+downloadTxtBtn.addEventListener(
+    "click",
+    downloadTXT
+);
+
+
+function downloadTXT() {
+
+    const text =
+        textEditor.value;
+
+
+    if (text.trim() === "") {
+
+        alert(
+            "There is no text to download."
+        );
+
+        return;
+    }
+
+
+    const blob =
+        new Blob(
+            [text],
+            {
+                type:
+                    "text/plain;charset=utf-8"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
 
     link.href = url;
-    link.download = "edited-text.txt";
+
+    link.download =
+        "edited-text.txt";
+
 
     document.body.appendChild(link);
 
@@ -184,5 +371,191 @@ downloadBtn.addEventListener("click", function () {
 
     document.body.removeChild(link);
 
+
     URL.revokeObjectURL(url);
-});
+
+
+    status.textContent =
+        "TXT file downloaded.";
+
+}
+
+
+// ==========================================
+// Generate & Download PDF
+// ==========================================
+
+downloadPdfBtn.addEventListener(
+    "click",
+    generatePDF
+);
+
+
+function generatePDF() {
+
+    const text =
+        textEditor.value.trim();
+
+
+    if (text === "") {
+
+        alert(
+            "Please extract or enter some text first."
+        );
+
+        return;
+    }
+
+
+    // Get jsPDF
+
+    const { jsPDF } =
+        window.jspdf;
+
+
+    // Create A4 PDF
+
+    const pdf =
+        new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4"
+        });
+
+
+    const pageWidth =
+        pdf.internal.pageSize.getWidth();
+
+
+    const pageHeight =
+        pdf.internal.pageSize.getHeight();
+
+
+    // PDF margins
+
+    const margin = 15;
+
+
+    const usableWidth =
+        pageWidth - (margin * 2);
+
+
+    const usableHeight =
+        pageHeight - (margin * 2);
+
+
+    // Font
+
+    pdf.setFont("helvetica");
+
+    pdf.setFontSize(12);
+
+
+    // Convert text into lines
+
+    const lines =
+        pdf.splitTextToSize(
+            text,
+            usableWidth
+        );
+
+
+    const lineHeight = 6;
+
+    let y = margin;
+
+
+    // Write lines
+
+    for (let i = 0; i < lines.length; i++) {
+
+        // New page when required
+
+        if (
+            y + lineHeight >
+            pageHeight - margin
+        ) {
+
+            pdf.addPage();
+
+            y = margin;
+
+        }
+
+
+        pdf.text(
+            lines[i],
+            margin,
+            y
+        );
+
+
+        y += lineHeight;
+
+    }
+
+
+    // Generate file name
+
+    let fileName =
+        "edited-pdf.pdf";
+
+
+    if (selectedFile) {
+
+        const originalName =
+            selectedFile.name
+                .replace(/\.pdf$/i, "");
+
+
+        fileName =
+            originalName +
+            "-edited.pdf";
+
+    }
+
+
+    // Download
+
+    pdf.save(fileName);
+
+
+    status.textContent =
+        "Edited PDF generated and downloaded successfully.";
+
+}
+
+
+// ==========================================
+// Clear Everything
+// ==========================================
+
+clearBtn.addEventListener(
+    "click",
+    clearAll
+);
+
+
+function clearAll() {
+
+    selectedFile = null;
+
+    pdfFile.value = "";
+
+    textEditor.value = "";
+
+    pdfPreview.innerHTML = `
+        <div class="empty">
+            <div class="empty-icon">📄</div>
+            <p>Select a PDF file to preview it here.</p>
+        </div>
+    `;
+
+
+    status.textContent =
+        "No PDF selected.";
+
+
+    updateStats();
+
+}
