@@ -1,561 +1,1061 @@
+// ============================================
+// PDF VISUAL EDITOR
+// ============================================
 
-// ==========================================
-// PDF TO TEXT EDITOR
-// ==========================================
+const pdfInput =
+    document.getElementById("pdfInput");
 
-// HTML elements
+const imageInput =
+    document.getElementById("imageInput");
 
-const pdfFile = document.getElementById("pdfFile");
+const addTextBtn =
+    document.getElementById("addText");
 
-const extractBtn = document.getElementById("extractBtn");
+const deleteBtn =
+    document.getElementById("deleteObject");
 
-const downloadTxtBtn =
-    document.getElementById("downloadTxtBtn");
+const downloadBtn =
+    document.getElementById("downloadPdf");
 
-const downloadPdfBtn =
-    document.getElementById("downloadPdfBtn");
+const prevBtn =
+    document.getElementById("prevPage");
 
-const clearBtn =
-    document.getElementById("clearBtn");
+const nextBtn =
+    document.getElementById("nextPage");
 
-const pdfPreview =
-    document.getElementById("pdfPreview");
+const pageInfo =
+    document.getElementById("pageInfo");
 
-const textEditor =
-    document.getElementById("textEditor");
+const message =
+    document.getElementById("message");
 
-const wordCount =
-    document.getElementById("wordCount");
+const textValue =
+    document.getElementById("textValue");
 
-const charCount =
-    document.getElementById("charCount");
+const fontSize =
+    document.getElementById("fontSize");
 
-const status =
-    document.getElementById("status");
+const boldBtn =
+    document.getElementById("boldBtn");
 
-
-// Selected PDF
-
-let selectedFile = null;
+const italicBtn =
+    document.getElementById("italicBtn");
 
 
-// ==========================================
-// PDF.js configuration
-// ==========================================
+// ============================================
+// PDF.js setup
+// ============================================
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 
-// ==========================================
-// File Selection
-// ==========================================
+// ============================================
+// Fabric Canvas
+// ============================================
 
-pdfFile.addEventListener("change", function () {
+const canvas =
+    new fabric.Canvas(
+        "editorCanvas",
+        {
+            preserveObjectStacking: true,
 
-    const file = this.files[0];
-
-    if (!file) {
-        return;
-    }
-
-    if (file.type !== "application/pdf") {
-
-        alert("Please select a valid PDF file.");
-
-        pdfFile.value = "";
-
-        return;
-    }
-
-    selectedFile = file;
-
-    status.textContent =
-        "Selected: " + file.name;
-
-    previewPDF(file);
-
-});
+            selection: true
+        }
+    );
 
 
-// ==========================================
-// PDF Preview
-// ==========================================
+// ============================================
+// Variables
+// ============================================
 
-async function previewPDF(file) {
+let pdfDocument = null;
 
-    pdfPreview.innerHTML = "";
+let currentPage = 1;
 
-    status.textContent =
-        "Loading PDF preview...";
+let totalPages = 0;
 
-    try {
+let originalPdfBytes = null;
 
-        const arrayBuffer =
-            await file.arrayBuffer();
+let pageData = {};
 
-        const pdf =
-            await pdfjsLib.getDocument({
-                data: arrayBuffer
-            }).promise;
+let pageWidth = 595;
+
+let pageHeight = 842;
 
 
-        for (
-            let pageNumber = 1;
-            pageNumber <= pdf.numPages;
-            pageNumber++
-        ) {
+// ============================================
+// Upload PDF
+// ============================================
 
-            const page =
-                await pdf.getPage(pageNumber);
+pdfInput.addEventListener(
+    "change",
+    async function () {
 
+        const file = this.files[0];
 
-            const viewport =
-                page.getViewport({
-                    scale: 1.2
-                });
+        if (!file) return;
 
+        if (file.type !== "application/pdf") {
 
-            const canvas =
-                document.createElement("canvas");
+            alert(
+                "Please select a PDF file."
+            );
 
+            return;
+        }
 
-            canvas.className =
-                "pdf-page";
+        message.textContent =
+            "Loading PDF...";
 
+        try {
 
-            const context =
-                canvas.getContext("2d");
+            originalPdfBytes =
+                await file.arrayBuffer();
 
+            pdfDocument =
+                await pdfjsLib.getDocument({
+                    data: originalPdfBytes
+                }).promise;
 
-            canvas.width =
-                viewport.width;
+            totalPages =
+                pdfDocument.numPages;
 
-            canvas.height =
-                viewport.height;
+            currentPage = 1;
 
+            pageData = {};
 
-            await page.render({
-                canvasContext: context,
-                viewport: viewport
-            }).promise;
+            await loadPage(currentPage);
 
+            message.textContent =
+                "PDF loaded. Select an object to edit it.";
 
-            pdfPreview.appendChild(canvas);
+        } catch (error) {
+
+            console.error(error);
+
+            message.textContent =
+                "Could not load PDF.";
 
         }
 
-
-        status.textContent =
-            `${pdf.numPages} page(s) loaded.`;
-
     }
-
-    catch (error) {
-
-        console.error(error);
-
-        pdfPreview.innerHTML = `
-            <div class="empty">
-                <div class="empty-icon">⚠️</div>
-                <p>Unable to preview this PDF.</p>
-            </div>
-        `;
-
-        status.textContent =
-            "Error loading PDF.";
-
-    }
-
-}
-
-
-// ==========================================
-// Extract PDF Text
-// ==========================================
-
-extractBtn.addEventListener(
-    "click",
-    extractText
 );
 
 
-async function extractText() {
+// ============================================
+// Load PDF Page
+// ============================================
 
-    if (!selectedFile) {
+async function loadPage(pageNumber) {
 
-        alert("Please upload a PDF first.");
-
-        return;
-    }
-
-
-    status.textContent =
-        "Extracting text...";
-
-    textEditor.value = "";
+    if (!pdfDocument) return;
 
 
-    try {
+    // Save current page objects
 
-        const arrayBuffer =
-            await selectedFile.arrayBuffer();
-
-
-        const pdf =
-            await pdfjsLib.getDocument({
-                data: arrayBuffer
-            }).promise;
+    saveCurrentPage();
 
 
-        let completeText = "";
-
-
-        for (
-            let pageNumber = 1;
-            pageNumber <= pdf.numPages;
-            pageNumber++
-        ) {
-
-            const page =
-                await pdf.getPage(pageNumber);
-
-
-            const textContent =
-                await page.getTextContent();
-
-
-            const pageText =
-                textContent.items
-                    .map(item => item.str)
-                    .join(" ");
-
-
-            completeText +=
-                `--- Page ${pageNumber} ---\n\n`;
-
-            completeText +=
-                pageText.trim();
-
-            completeText +=
-                "\n\n";
-
-        }
-
-
-        textEditor.value =
-            completeText.trim();
-
-
-        updateStats();
-
-
-        status.textContent =
-            "Text extraction completed successfully.";
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-        textEditor.value = "";
-
-        status.textContent =
-            "Unable to extract text.";
-
-        alert(
-            "Text extraction failed. This may be a scanned/image-only PDF."
+    const page =
+        await pdfDocument.getPage(
+            pageNumber
         );
 
-    }
 
-}
-
-
-// ==========================================
-// Word & Character Count
-// ==========================================
-
-textEditor.addEventListener(
-    "input",
-    updateStats
-);
+    const viewport =
+        page.getViewport({
+            scale: 1
+        });
 
 
-function updateStats() {
+    pageWidth =
+        viewport.width;
 
-    const text =
-        textEditor.value.trim();
-
-
-    // Character count
-
-    charCount.textContent =
-        textEditor.value.length;
+    pageHeight =
+        viewport.height;
 
 
-    // Word count
+    // Render page to temporary canvas
 
-    if (text === "") {
-
-        wordCount.textContent = "0";
-
-        return;
-    }
+    const tempCanvas =
+        document.createElement("canvas");
 
 
-    const words =
-        text.split(/\s+/);
+    tempCanvas.width =
+        viewport.width;
+
+    tempCanvas.height =
+        viewport.height;
 
 
-    wordCount.textContent =
-        words.length;
-
-}
+    const context =
+        tempCanvas.getContext("2d");
 
 
-// ==========================================
-// Download TXT
-// ==========================================
-
-downloadTxtBtn.addEventListener(
-    "click",
-    downloadTXT
-);
+    await page.render({
+        canvasContext: context,
+        viewport: viewport
+    }).promise;
 
 
-function downloadTXT() {
+    // Set Fabric canvas size
 
-    const text =
-        textEditor.value;
+    canvas.setWidth(
+        viewport.width
+    );
 
-
-    if (text.trim() === "") {
-
-        alert(
-            "There is no text to download."
-        );
-
-        return;
-    }
+    canvas.setHeight(
+        viewport.height
+    );
 
 
-    const blob =
-        new Blob(
-            [text],
+    // Clear Fabric canvas
+
+    canvas.clear();
+
+
+    // Set PDF page as background
+
+    const image =
+        new fabric.Image(
+            tempCanvas,
             {
-                type:
-                    "text/plain;charset=utf-8"
+                selectable: false,
+                evented: false,
+
+                left: 0,
+                top: 0,
+
+                originX: "left",
+                originY: "top"
             }
         );
 
 
-    const url =
-        URL.createObjectURL(blob);
+    canvas.setBackgroundImage(
+        image,
+        canvas.renderAll.bind(canvas)
+    );
 
 
-    const link =
-        document.createElement("a");
+    // Restore objects
+
+    if (pageData[pageNumber]) {
+
+        pageData[pageNumber]
+            .forEach(objectData => {
+
+                fabric.util.enlivenObjects(
+                    [objectData],
+                    objects => {
+
+                        objects.forEach(obj => {
+                            canvas.add(obj);
+                        });
+
+                        canvas.renderAll();
+
+                    }
+                );
+
+            });
+
+    }
 
 
-    link.href = url;
-
-    link.download =
-        "edited-text.txt";
+    currentPage =
+        pageNumber;
 
 
-    document.body.appendChild(link);
-
-    link.click();
-
-    document.body.removeChild(link);
-
-
-    URL.revokeObjectURL(url);
-
-
-    status.textContent =
-        "TXT file downloaded.";
+    updatePageInfo();
 
 }
 
 
-// ==========================================
-// Generate & Download PDF
-// ==========================================
+// ============================================
+// Save page objects
+// ============================================
 
-downloadPdfBtn.addEventListener(
+function saveCurrentPage() {
+
+    if (!pdfDocument) return;
+
+
+    const objects =
+        canvas.getObjects();
+
+
+    pageData[currentPage] =
+        objects.map(
+            object => object.toObject()
+        );
+
+}
+
+
+// ============================================
+// Page information
+// ============================================
+
+function updatePageInfo() {
+
+    pageInfo.textContent =
+        `Page ${currentPage} / ${totalPages}`;
+
+}
+
+
+// ============================================
+// Previous Page
+// ============================================
+
+prevBtn.addEventListener(
     "click",
-    generatePDF
+    async function () {
+
+        if (
+            !pdfDocument ||
+            currentPage <= 1
+        ) {
+            return;
+        }
+
+        await loadPage(
+            currentPage - 1
+        );
+
+    }
 );
 
 
-function generatePDF() {
+// ============================================
+// Next Page
+// ============================================
 
-    const text =
-        textEditor.value.trim();
+nextBtn.addEventListener(
+    "click",
+    async function () {
 
+        if (
+            !pdfDocument ||
+            currentPage >= totalPages
+        ) {
+            return;
+        }
 
-    if (text === "") {
-
-        alert(
-            "Please extract or enter some text first."
+        await loadPage(
+            currentPage + 1
         );
+
+    }
+);
+
+
+// ============================================
+// Add Text
+// ============================================
+
+addTextBtn.addEventListener(
+    "click",
+    function () {
+
+        const text =
+            new fabric.IText(
+                "Edit this text",
+                {
+                    left: 80,
+                    top: 80,
+
+                    fontSize: 18,
+
+                    fill: "#000000",
+
+                    fontFamily:
+                        "Arial",
+
+                    editable: true
+                }
+            );
+
+
+        canvas.add(text);
+
+        canvas.setActiveObject(text);
+
+        text.enterEditing();
+
+        text.selectAll();
+
+        canvas.renderAll();
+
+    }
+);
+
+
+// ============================================
+// Text input property
+// ============================================
+
+textValue.addEventListener(
+    "input",
+    function () {
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (
+            object &&
+            (
+                object.type === "i-text" ||
+                object.type === "text"
+            )
+        ) {
+
+            object.set(
+                "text",
+                textValue.value
+            );
+
+            canvas.renderAll();
+
+        }
+
+    }
+);
+
+
+// ============================================
+// Font Size
+// ============================================
+
+fontSize.addEventListener(
+    "input",
+    function () {
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (
+            object &&
+            (
+                object.type === "i-text" ||
+                object.type === "text"
+            )
+        ) {
+
+            object.set(
+                "fontSize",
+                Number(fontSize.value)
+            );
+
+            canvas.renderAll();
+
+        }
+
+    }
+);
+
+
+// ============================================
+// Selection changed
+// ============================================
+
+canvas.on(
+    "selection:created",
+    updateProperties
+);
+
+canvas.on(
+    "selection:updated",
+    updateProperties
+);
+
+
+function updateProperties() {
+
+    const object =
+        canvas.getActiveObject();
+
+
+    if (!object) return;
+
+
+    if (
+        object.type === "i-text" ||
+        object.type === "text"
+    ) {
+
+        textValue.value =
+            object.text || "";
+
+        fontSize.value =
+            object.fontSize || 18;
+
+    }
+
+}
+
+
+// ============================================
+// Bold
+// ============================================
+
+boldBtn.addEventListener(
+    "click",
+    function () {
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (!object) return;
+
+
+        if (
+            object.type === "i-text" ||
+            object.type === "text"
+        ) {
+
+            object.set(
+                "fontWeight",
+                object.fontWeight === "bold"
+                    ? "normal"
+                    : "bold"
+            );
+
+            canvas.renderAll();
+
+        }
+
+    }
+);
+
+
+// ============================================
+// Italic
+// ============================================
+
+italicBtn.addEventListener(
+    "click",
+    function () {
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (!object) return;
+
+
+        if (
+            object.type === "i-text" ||
+            object.type === "text"
+        ) {
+
+            object.set(
+                "fontStyle",
+                object.fontStyle === "italic"
+                    ? "normal"
+                    : "italic"
+            );
+
+            canvas.renderAll();
+
+        }
+
+    }
+);
+
+
+// ============================================
+// Delete object
+// ============================================
+
+deleteBtn.addEventListener(
+    "click",
+    function () {
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (!object) {
+
+            alert(
+                "Please select an object first."
+            );
+
+            return;
+        }
+
+
+        canvas.remove(object);
+
+        canvas.discardActiveObject();
+
+        canvas.renderAll();
+
+    }
+);
+
+
+// ============================================
+// Keyboard Delete
+// ============================================
+
+document.addEventListener(
+    "keydown",
+    function (event) {
+
+        if (
+            event.key !== "Delete" &&
+            event.key !== "Backspace"
+        ) {
+            return;
+        }
+
+
+        const object =
+            canvas.getActiveObject();
+
+
+        if (!object) return;
+
+
+        if (object.isEditing) {
+            return;
+        }
+
+
+        canvas.remove(object);
+
+        canvas.discardActiveObject();
+
+        canvas.renderAll();
+
+    }
+);
+
+
+// ============================================
+// Add Image
+// ============================================
+
+imageInput.addEventListener(
+    "change",
+    function () {
+
+        const file =
+            this.files[0];
+
+
+        if (!file) return;
+
+
+        const reader =
+            new FileReader();
+
+
+        reader.onload =
+            function (event) {
+
+                fabric.Image.fromURL(
+                    event.target.result,
+                    function (img) {
+
+                        img.set({
+                            left: 100,
+                            top: 100
+                        });
+
+
+                        // Resize large image
+
+                        const maxWidth =
+                            200;
+
+
+                        if (
+                            img.width >
+                            maxWidth
+                        ) {
+
+                            img.scaleToWidth(
+                                maxWidth
+                            );
+
+                        }
+
+
+                        canvas.add(img);
+
+                        canvas.setActiveObject(
+                            img
+                        );
+
+                        canvas.renderAll();
+
+                    }
+                );
+
+            };
+
+
+        reader.readAsDataURL(file);
+
+        this.value = "";
+
+    }
+);
+
+
+// ============================================
+// Download Edited PDF
+// ============================================
+
+downloadBtn.addEventListener(
+    "click",
+    async function () {
+
+        if (!pdfDocument) {
+
+            alert(
+                "Please upload a PDF first."
+            );
+
+            return;
+        }
+
+
+        // Save current page
+
+        saveCurrentPage();
+
+
+        message.textContent =
+            "Generating edited PDF...";
+
+
+        try {
+
+            const {
+                jsPDF
+            } = window.jspdf;
+
+
+            const outputPdf =
+                new jsPDF({
+                    orientation:
+                        pageWidth > pageHeight
+                            ? "landscape"
+                            : "portrait",
+
+                    unit: "pt",
+
+                    format: [
+                        pageWidth,
+                        pageHeight
+                    ]
+                });
+
+
+            for (
+                let pageNumber = 1;
+                pageNumber <= totalPages;
+                pageNumber++
+            ) {
+
+                if (pageNumber > 1) {
+
+                    outputPdf.addPage(
+                        [
+                            pageWidth,
+                            pageHeight
+                        ]
+                    );
+
+                }
+
+
+                // Load original page
+
+                const page =
+                    await pdfDocument.getPage(
+                        pageNumber
+                    );
+
+
+                const viewport =
+                    page.getViewport({
+                        scale: 1
+                    });
+
+
+                // Render original PDF page
+
+                const tempCanvas =
+                    document.createElement(
+                        "canvas"
+                    );
+
+
+                tempCanvas.width =
+                    viewport.width;
+
+                tempCanvas.height =
+                    viewport.height;
+
+
+                await page.render({
+                    canvasContext:
+                        tempCanvas.getContext(
+                            "2d"
+                        ),
+
+                    viewport:
+                        viewport
+                }).promise;
+
+
+                const backgroundImage =
+                    tempCanvas.toDataURL(
+                        "image/png"
+                    );
+
+
+                // Add original page
+
+                outputPdf.addImage(
+                    backgroundImage,
+                    "PNG",
+                    0,
+                    0,
+                    pageWidth,
+                    pageHeight
+                );
+
+
+                // Add edited objects
+
+                const objects =
+                    pageData[pageNumber] || [];
+
+
+                for (
+                    const objectData of objects
+                ) {
+
+                    await addObjectToPDF(
+                        outputPdf,
+                        objectData
+                    );
+
+                }
+
+            }
+
+
+            outputPdf.save(
+                "edited-pdf.pdf"
+            );
+
+
+            message.textContent =
+                "Edited PDF downloaded successfully.";
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            message.textContent =
+                "Error generating PDF.";
+
+            alert(
+                "Could not generate PDF."
+            );
+
+        }
+
+    }
+);
+
+
+// ============================================
+// Add Fabric object to jsPDF
+// ============================================
+
+async function addObjectToPDF(
+    pdf,
+    object
+) {
+
+    const scaleX =
+        object.scaleX || 1;
+
+    const scaleY =
+        object.scaleY || 1;
+
+
+    // TEXT
+
+    if (
+        object.type === "i-text" ||
+        object.type === "text"
+    ) {
+
+        const fontSize =
+            (object.fontSize || 18)
+            * scaleX;
+
+
+        let fontStyle =
+            "normal";
+
+
+        if (
+            object.fontWeight === "bold" &&
+            object.fontStyle === "italic"
+        ) {
+
+            fontStyle =
+                "bolditalic";
+
+        }
+
+        else if (
+            object.fontWeight === "bold"
+        ) {
+
+            fontStyle =
+                "bold";
+
+        }
+
+        else if (
+            object.fontStyle === "italic"
+        ) {
+
+            fontStyle =
+                "italic";
+
+        }
+
+
+        pdf.setFont(
+            "helvetica",
+            fontStyle
+        );
+
+
+        pdf.setFontSize(
+            fontSize
+        );
+
+
+        pdf.setTextColor(
+            hexToRgb(object.fill || "#000000")
+        );
+
+
+        const x =
+            object.left || 0;
+
+
+        const y =
+            object.top || 0;
+
+
+        const text =
+            object.text || "";
+
+
+        pdf.text(
+            text,
+            x,
+            y + fontSize
+        );
+
 
         return;
     }
 
 
-    // Get jsPDF
+    // IMAGE
 
-    const { jsPDF } =
-        window.jspdf;
+    if (
+        object.type === "image" &&
+        object.src
+    ) {
 
-
-    // Create A4 PDF
-
-    const pdf =
-        new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4"
-        });
+        const width =
+            (object.width || 0) *
+            scaleX;
 
 
-    const pageWidth =
-        pdf.internal.pageSize.getWidth();
+        const height =
+            (object.height || 0) *
+            scaleY;
 
 
-    const pageHeight =
-        pdf.internal.pageSize.getHeight();
-
-
-    // PDF margins
-
-    const margin = 15;
-
-
-    const usableWidth =
-        pageWidth - (margin * 2);
-
-
-    const usableHeight =
-        pageHeight - (margin * 2);
-
-
-    // Font
-
-    pdf.setFont("helvetica");
-
-    pdf.setFontSize(12);
-
-
-    // Convert text into lines
-
-    const lines =
-        pdf.splitTextToSize(
-            text,
-            usableWidth
+        pdf.addImage(
+            object.src,
+            "PNG",
+            object.left || 0,
+            object.top || 0,
+            width,
+            height
         );
 
-
-    const lineHeight = 6;
-
-    let y = margin;
-
-
-    // Write lines
-
-    for (let i = 0; i < lines.length; i++) {
-
-        // New page when required
-
-        if (
-            y + lineHeight >
-            pageHeight - margin
-        ) {
-
-            pdf.addPage();
-
-            y = margin;
-
-        }
-
-
-        pdf.text(
-            lines[i],
-            margin,
-            y
-        );
-
-
-        y += lineHeight;
-
     }
-
-
-    // Generate file name
-
-    let fileName =
-        "edited-pdf.pdf";
-
-
-    if (selectedFile) {
-
-        const originalName =
-            selectedFile.name
-                .replace(/\.pdf$/i, "");
-
-
-        fileName =
-            originalName +
-            "-edited.pdf";
-
-    }
-
-
-    // Download
-
-    pdf.save(fileName);
-
-
-    status.textContent =
-        "Edited PDF generated and downloaded successfully.";
 
 }
 
 
-// ==========================================
-// Clear Everything
-// ==========================================
+// ============================================
+// HEX color → RGB
+// ============================================
 
-clearBtn.addEventListener(
-    "click",
-    clearAll
-);
+function hexToRgb(hex) {
 
-
-function clearAll() {
-
-    selectedFile = null;
-
-    pdfFile.value = "";
-
-    textEditor.value = "";
-
-    pdfPreview.innerHTML = `
-        <div class="empty">
-            <div class="empty-icon">📄</div>
-            <p>Select a PDF file to preview it here.</p>
-        </div>
-    `;
+    hex =
+        hex.replace(
+            "#",
+            ""
+        );
 
 
-    status.textContent =
-        "No PDF selected.";
+    if (hex.length === 3) {
+
+        hex =
+            hex
+                .split("")
+                .map(
+                    x => x + x
+                )
+                .join("");
+
+    }
 
 
-    updateStats();
+    return [
+        parseInt(
+            hex.substring(0, 2),
+            16
+        ),
+
+        parseInt(
+            hex.substring(2, 4),
+            16
+        ),
+
+        parseInt(
+            hex.substring(4, 6),
+            16
+        )
+    ];
 
 }
